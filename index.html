@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hazard Report">
+<meta name="theme-color" content="#0D2B5E">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Hazard Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --orange: #0D2B5E;
+    --orange-light: #E8EEF8;
+    --orange-mid: #1A4A9C;
+    --dark: #1A1A1A;
+    --gray: #6B6B6B;
+    --light: #F0F3F9;
+    --white: #FFFFFF;
+    --border: #D0D8E8;
+    --success: #2D7A3A;
+    --success-light: #EAF5EC;
+    --shadow: 0 2px 12px rgba(13,43,94,0.10);
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--light);
+    color: var(--dark);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .header {
+    background: var(--orange);
+    padding: 16px 20px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .header h1 { color: white; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .header p { color: rgba(255,255,255,0.8); font-size: 12px; }
+  .sync-badge {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .sync-badge.online { background: rgba(255,255,255,0.25); color: white; }
+  .sync-badge.offline { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .sync-badge.online .sync-dot { background: #7FE89A; }
+  .sync-badge.offline .sync-dot { background: rgba(255,255,255,0.4); }
+
+  .content { padding: 16px; }
+
+  .pending-bar {
+    background: #FFF8E7; border: 1px solid #F5D875; border-radius: 10px;
+    padding: 10px 14px; display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px; font-size: 12px; color: #7A5C00; font-weight: 600;
+  }
+
+  .section-card {
+    background: var(--white); border-radius: 16px; padding: 18px;
+    margin-bottom: 12px; border: 1px solid var(--border); box-shadow: var(--shadow);
+  }
+  .section-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--orange); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--orange-light);
+  }
+  label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--gray); margin-bottom: 6px; margin-top: 14px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input[type=text], select, textarea {
+    width: 100%; padding: 11px 14px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 14px; color: var(--dark); background: var(--light);
+    transition: border-color 0.15s; outline: none; font-family: inherit;
+    -webkit-appearance: none; appearance: none;
+  }
+  input[type=text]:focus, select:focus, textarea:focus {
+    border-color: var(--orange); background: white;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+  }
+  textarea { resize: none; min-height: 80px; }
+
+  .jenis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .jenis-btn {
+    padding: 12px 8px; border: 1.5px solid var(--border); border-radius: 12px;
+    background: var(--light); cursor: pointer; text-align: center;
+    transition: all 0.15s; font-size: 12px; font-weight: 600;
+    color: var(--gray); line-height: 1.3; font-family: inherit;
+  }
+  .jenis-btn.selected { border-color: var(--orange); background: var(--orange-light); color: var(--orange); }
+  .jenis-btn .jenis-icon { font-size: 18px; display: block; margin-bottom: 4px; }
+
+  .sub-card {
+    background: var(--orange-light); border: 1.5px solid #A8BCE0;
+    border-radius: 12px; padding: 14px; margin-top: 12px;
+  }
+  .sub-label { font-size: 12px; font-weight: 700; color: var(--orange); margin-bottom: 10px; }
+  .sub-option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; margin-bottom: 6px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; color: var(--dark); background: white;
+    border: 1.5px solid transparent; transition: all 0.12s; font-weight: 500;
+  }
+  .sub-option:last-child { margin-bottom: 0; }
+  .sub-option.selected { border-color: var(--orange); background: #FFF5F0; color: var(--orange); }
+  .radio-circle {
+    width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border);
+    flex-shrink: 0; transition: all 0.12s; display: flex; align-items: center; justify-content: center;
+  }
+  .sub-option.selected .radio-circle { border-color: var(--orange); background: var(--orange); }
+  .radio-inner { width: 6px; height: 6px; border-radius: 50%; background: white; display: none; }
+  .sub-option.selected .radio-inner { display: block; }
+  .lain-input { margin-top: 8px; display: none; }
+  .lain-input.visible { display: block; }
+
+  .btn-primary {
+    width: 100%; padding: 15px; background: var(--orange); color: white;
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+    cursor: pointer; letter-spacing: -0.2px; transition: opacity 0.15s, transform 0.1s;
+    margin-top: 16px; font-family: inherit;
+  }
+  .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 200;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-sheet {
+    background: white; border-radius: 24px 24px 0 0;
+    padding: 24px 20px 40px; width: 100%; max-width: 480px;
+  }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title { font-size: 17px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+  .modal-sub { font-size: 13px; color: var(--gray); text-align: center; margin-bottom: 20px; }
+  .modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn-edit {
+    padding: 14px; border: 1.5px solid var(--border); background: var(--light);
+    border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
+    color: var(--dark); transition: all 0.12s; font-family: inherit;
+  }
+  .btn-ok {
+    padding: 14px; border: none; background: var(--orange); border-radius: 12px;
+    font-size: 14px; font-weight: 700; cursor: pointer; color: white;
+    transition: all 0.12s; font-family: inherit;
+  }
+  .btn-ok:active, .btn-edit:active { transform: scale(0.97); }
+
+  .success-screen {
+    display: none; text-align: center; padding: 40px 20px;
+  }
+  .success-screen.active { display: block; }
+  .success-icon {
+    width: 72px; height: 72px; border-radius: 50%; background: var(--success-light);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px; font-size: 32px;
+  }
+  .success-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .success-sub { font-size: 14px; color: var(--gray); margin-bottom: 28px; line-height: 1.6; }
+  .btn-lagi {
+    width: 100%; padding: 14px; background: var(--orange-light); color: var(--orange);
+    border: 1.5px solid #A8BCE0; border-radius: 12px; font-size: 14px; font-weight: 700;
+    cursor: pointer; margin-bottom: 10px; transition: all 0.12s; font-family: inherit;
+  }
+  .btn-selesai {
+    width: 100%; padding: 14px; background: var(--light); color: var(--gray);
+    border: 1.5px solid var(--border); border-radius: 12px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.12s; font-family: inherit;
+  }
+
+  .form-screen.hidden { display: none; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1A1A1A; color: white; padding: 12px 20px; border-radius: 30px;
+    font-size: 13px; font-weight: 600; z-index: 300; opacity: 0;
+    transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <p style="color:rgba(255,255,255,0.65); font-size:11px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:2px;">PT. Citra Lampia Mandiri</p>
+      <h1>⚠ Hazard Report</h1>
+      <p id="tgl-header"></p>
+    </div>
+    <div class="sync-badge" id="sync-badge">
+      <div class="sync-dot"></div>
+      <span id="sync-text">Online</span>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <div id="pending-bar" class="pending-bar" style="display:none">
+    ⏳ <span id="pending-count">0</span> laporan menunggu sinkronisasi
+  </div>
+
+  <!-- FORM SCREEN -->
+  <div id="form-screen" class="form-screen">
+
+    <div class="section-card">
+      <div class="section-label">Identitas Pelapor</div>
+      <label>Nama Pelapor</label>
+      <input type="text" id="nama" placeholder="Masukkan nama lengkap">
+      <label>Jabatan</label>
+      <input type="text" id="jabatan" placeholder="Jabatan / posisi Anda">
+      <label>Departemen</label>
+      <input type="text" id="departemen" placeholder="Nama departemen">
+      <label>Nama Atasan Langsung</label>
+      <input type="text" id="atasan" placeholder="Nama atasan Anda">
+    </div>
+
+    <div class="section-card">
+      <div class="section-label">Informasi Kejadian</div>
+      <label>Lokasi Kejadian</label>
+      <input type="text" id="lokasi" placeholder="Lokasi spesifik kejadian">
+
+      <label>Jenis Kejadian</label>
+      <div class="jenis-grid">
+        <button class="jenis-btn" onclick="pilihJenis('near_miss',this)">
+          <span class="jenis-icon">⚡</span>Near Miss
+        </button>
+        <button class="jenis-btn" onclick="pilihJenis('incident',this)">
+          <span class="jenis-icon">🚨</span>Incident
+        </button>
+        <button class="jenis-btn" onclick="pilihJenis('property_damage',this)">
+          <span class="jenis-icon">🔧</span>Property Damage
+        </button>
+        <button class="jenis-btn" onclick="pilihJenis('lti',this)">
+          <span class="jenis-icon">🏥</span>Lost Time Injury
+        </button>
+        <button class="jenis-btn" style="grid-column:1/-1" onclick="pilihJenis('fatality',this)">
+          <span class="jenis-icon">⛔</span>Fatality
+        </button>
+      </div>
+
+      <!-- NEAR MISS -->
+      <div id="sub_near_miss" class="sub-card" style="display:none">
+        <div class="sub-label">Detail Near Miss</div>
+        <div class="sub-option" onclick="pilihSub('near_miss','Mendahului di Blind Spot',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Mendahului di Blind Spot
+        </div>
+        <div class="sub-option" onclick="pilihSub('near_miss','Jarak Antar Unit Terlalu Dekat',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Jarak Antar Unit Terlalu Dekat
+        </div>
+        <div class="sub-option" onclick="pilihSub('near_miss','Unit Beriringan Lebih dari 3',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Unit Beriringan Lebih dari 3
+        </div>
+        <div class="sub-option" onclick="pilihSub('near_miss','Kecepatan Tinggi',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Kecepatan Tinggi
+        </div>
+        <div class="sub-option" onclick="pilihSub('near_miss','Lain-lain',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Lain-lain (sebutkan)
+        </div>
+        <div class="lain-input" id="lain_near_miss">
+          <input type="text" placeholder="Sebutkan detail kejadian..." id="lain_near_miss_text">
+        </div>
+      </div>
+
+      <!-- INCIDENT -->
+      <div id="sub_incident" class="sub-card" style="display:none">
+        <div class="sub-label">Detail Incident</div>
+        <div class="sub-option" onclick="pilihSub('incident','Terpeleset / Tersandung / Jatuh',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Terpeleset / Tersandung / Jatuh
+        </div>
+        <div class="sub-option" onclick="pilihSub('incident','Tertimpa Material / Benda Jatuh',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Tertimpa Material / Benda Jatuh
+        </div>
+        <div class="sub-option" onclick="pilihSub('incident','Terkena Alat / Mesin',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Terkena Alat / Mesin
+        </div>
+        <div class="sub-option" onclick="pilihSub('incident','Kebakaran Kecil',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Kebakaran Kecil
+        </div>
+        <div class="sub-option" onclick="pilihSub('incident','Lain-lain',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Lain-lain (sebutkan)
+        </div>
+        <div class="lain-input" id="lain_incident">
+          <input type="text" placeholder="Sebutkan detail kejadian..." id="lain_incident_text">
+        </div>
+      </div>
+
+      <!-- PROPERTY DAMAGE -->
+      <div id="sub_property_damage" class="sub-card" style="display:none">
+        <div class="sub-label">Detail Property Damage</div>
+        <div class="sub-option" onclick="pilihSub('property_damage','Kerusakan Unit / Kendaraan',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Kerusakan Unit / Kendaraan
+        </div>
+        <div class="sub-option" onclick="pilihSub('property_damage','Kerusakan Infrastruktur',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Kerusakan Infrastruktur
+        </div>
+        <div class="sub-option" onclick="pilihSub('property_damage','Kerusakan Peralatan / Tools',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Kerusakan Peralatan / Tools
+        </div>
+        <div class="sub-option" onclick="pilihSub('property_damage','Tumpahan Material / Bahan Kimia',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Tumpahan Material / Bahan Kimia
+        </div>
+        <div class="sub-option" onclick="pilihSub('property_damage','Lain-lain',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Lain-lain (sebutkan)
+        </div>
+        <div class="lain-input" id="lain_property_damage">
+          <input type="text" placeholder="Sebutkan detail kerusakan..." id="lain_property_damage_text">
+        </div>
+      </div>
+
+      <!-- LTI & FATALITY -->
+      <div id="sub_lti" class="sub-card" style="display:none">
+        <div class="sub-label" id="sub_lti_label">Detail Cedera</div>
+        <div class="sub-option" onclick="pilihSub('lti','Cedera Bagian Tubuh',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Cedera Bagian Tubuh (tangan, kaki, dll)
+        </div>
+        <div class="sub-option" onclick="pilihSub('lti','Patah Tulang',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Patah Tulang
+        </div>
+        <div class="sub-option" onclick="pilihSub('lti','Luka Bakar',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Luka Bakar
+        </div>
+        <div class="sub-option" onclick="pilihSub('lti','Kecelakaan Fatal',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Kecelakaan Fatal
+        </div>
+        <div class="sub-option" onclick="pilihSub('lti','Lain-lain',this.parentElement)">
+          <div class="radio-circle"><div class="radio-inner"></div></div>Lain-lain (sebutkan)
+        </div>
+        <div class="lain-input" id="lain_lti">
+          <input type="text" placeholder="Sebutkan detail cedera..." id="lain_lti_text">
+        </div>
+      </div>
+
+      <label>Keterangan Tambahan</label>
+      <textarea id="keterangan" placeholder="Deskripsi singkat kejadian (opsional)..."></textarea>
+    </div>
+
+    <button class="btn-primary" onclick="submitLaporan()">Kirim Laporan →</button>
+    <div style="height:24px"></div>
+  </div>
+
+  <!-- SUCCESS SCREEN -->
+  <div id="success-screen" class="success-screen">
+    <div class="success-icon">✅</div>
+    <div class="success-title">Laporan Terkirim!</div>
+    <div class="success-sub" id="success-msg">Laporan Anda telah disimpan.</div>
+    <button class="btn-lagi" onclick="laporLagi()">Ya, Ada Lagi yang Perlu Dilaporkan</button>
+    <button class="btn-selesai" onclick="selesai()">Tidak, Selesai</button>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Apakah laporan Anda sudah lengkap?</div>
+    <div class="modal-sub">Periksa kembali sebelum mengirimkan laporan ke sistem.</div>
+    <div class="modal-btns">
+      <button class="btn-edit" onclick="tutupModal()">✏ Edit</button>
+      <button class="btn-ok" onclick="simpanLaporan()">✓ Oke, Kirim</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+// KONFIGURASI — ISI URL GOOGLE APPS SCRIPT DI SINI
+// =============================================
+const GOOGLE_SCRIPT_URL = localStorage.getItem('hazard_sheet_url') || '';
+// Untuk mengatur URL, buka console browser dan ketik:
+// localStorage.setItem('hazard_sheet_url', 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec')
+// =============================================
+
+const jenisMap = {
+  near_miss: 'Near Miss', incident: 'Incident',
+  property_damage: 'Property Damage', lti: 'Lost Time Injury', fatality: 'Fatality'
+};
+
+let selectedJenis = null;
+let selectedSub = {};
+let isOnline = navigator.onLine;
+
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function updateDate() {
+  const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+  document.getElementById('tgl-header').textContent = new Date().toLocaleDateString('id-ID', opts);
+}
+
+function updateOnlineStatus() {
+  isOnline = navigator.onLine;
+  const badge = document.getElementById('sync-badge');
+  const text = document.getElementById('sync-text');
+  badge.className = 'sync-badge ' + (isOnline ? 'online' : 'offline');
+  text.textContent = isOnline ? 'Online' : 'Offline';
+  if (isOnline) syncPendingData();
+  updatePendingBar();
+}
+
+function getQueue() {
+  try { return JSON.parse(localStorage.getItem('hazard_queue') || '[]'); } catch { return []; }
+}
+function saveQueue(q) { localStorage.setItem('hazard_queue', JSON.stringify(q)); }
+
+function updatePendingBar() {
+  const q = getQueue();
+  const bar = document.getElementById('pending-bar');
+  document.getElementById('pending-count').textContent = q.length;
+  bar.style.display = q.length > 0 ? 'flex' : 'none';
+}
+
+async function syncPendingData() {
+  const url = localStorage.getItem('hazard_sheet_url') || GOOGLE_SCRIPT_URL;
+  if (!url) return;
+  const q = getQueue();
+  if (q.length === 0) return;
+  const remaining = [];
+  for (const item of q) {
+    try {
+      await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(item) });
+    } catch { remaining.push(item); }
+  }
+  const synced = q.length - remaining.length;
+  saveQueue(remaining);
+  updatePendingBar();
+  if (synced > 0) showToast('✅ ' + synced + ' laporan berhasil disinkronkan');
+}
+
+function pilihJenis(jenis, btn) {
+  selectedJenis = jenis;
+  selectedSub = {};
+  document.querySelectorAll('.jenis-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  ['near_miss','incident','property_damage','lti'].forEach(j => {
+    const el = document.getElementById('sub_' + j);
+    if (el) el.style.display = 'none';
+  });
+  document.querySelectorAll('.sub-option').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('.lain-input').forEach(i => i.classList.remove('visible'));
+
+  if (jenis === 'fatality') {
+    document.getElementById('sub_lti_label').textContent = 'Detail Fatality';
+    document.getElementById('sub_lti').style.display = 'block';
+  } else if (jenis === 'lti') {
+    document.getElementById('sub_lti_label').textContent = 'Detail Cedera';
+    document.getElementById('sub_lti').style.display = 'block';
+  } else if (document.getElementById('sub_' + jenis)) {
+    document.getElementById('sub_' + jenis).style.display = 'block';
+  }
+}
+
+function pilihSub(jenis, val, container) {
+  selectedSub[jenis] = val;
+  container.querySelectorAll('.sub-option').forEach(o => o.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  const lainEl = document.getElementById('lain_' + jenis);
+  if (lainEl) lainEl.classList.toggle('visible', val === 'Lain-lain');
+}
+
+function submitLaporan() {
+  const fields = ['nama','jabatan','departemen','atasan','lokasi'];
+  for (const f of fields) {
+    if (!document.getElementById(f).value.trim()) {
+      showToast('⚠ Harap lengkapi semua field wajib'); return;
+    }
+  }
+  if (!selectedJenis) { showToast('⚠ Pilih jenis kejadian'); return; }
+  const subKey = selectedJenis === 'fatality' ? 'lti' : selectedJenis;
+  if (!selectedSub[subKey]) { showToast('⚠ Pilih detail jenis kejadian'); return; }
+  document.getElementById('modal').classList.add('active');
+}
+
+function tutupModal() {
+  document.getElementById('modal').classList.remove('active');
+}
+
+async function simpanLaporan() {
+  tutupModal();
+  const subKey = selectedJenis === 'fatality' ? 'lti' : selectedJenis;
+  let subVal = selectedSub[subKey] || '-';
+  if (subVal === 'Lain-lain') {
+    const lainText = document.getElementById('lain_' + subKey + '_text');
+    subVal = 'Lain-lain: ' + (lainText ? lainText.value.trim() : '');
+  }
+
+  const now = new Date();
+  const data = {
+    timestamp: now.toISOString(),
+    tanggal: now.toLocaleDateString('id-ID'),
+    jam: now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
+    nama: document.getElementById('nama').value.trim(),
+    jabatan: document.getElementById('jabatan').value.trim(),
+    departemen: document.getElementById('departemen').value.trim(),
+    atasan: document.getElementById('atasan').value.trim(),
+    lokasi: document.getElementById('lokasi').value.trim(),
+    jenis_kejadian: jenisMap[selectedJenis],
+    detail_kejadian: subVal,
+    keterangan: document.getElementById('keterangan').value.trim(),
+    status: 'pending'
+  };
+
+  const url = localStorage.getItem('hazard_sheet_url') || GOOGLE_SCRIPT_URL;
+  let terkirim = false;
+
+  if (isOnline && url) {
+    try {
+      await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+      terkirim = true;
+    } catch {}
+  }
+
+  if (!terkirim) {
+    data.status = 'queued';
+    const q = getQueue(); q.push(data); saveQueue(q);
+  }
+  updatePendingBar();
+
+  const msg = terkirim
+    ? 'Laporan berhasil dikirim ke Google Sheets. Data tersimpan dalam database.'
+    : 'Jaringan tidak tersedia. Laporan disimpan di perangkat dan akan otomatis terkirim saat jaringan tersedia.';
+  document.getElementById('success-msg').textContent = msg;
+  document.getElementById('form-screen').classList.add('hidden');
+  document.getElementById('success-screen').classList.add('active');
+}
+
+function clearFormKejadian() {
+  selectedJenis = null; selectedSub = {};
+  document.getElementById('lokasi').value = '';
+  document.getElementById('keterangan').value = '';
+  ['near_miss','incident','property_damage','lti'].forEach(j => {
+    const el = document.getElementById('sub_' + j);
+    if (el) el.style.display = 'none';
+  });
+  document.querySelectorAll('.jenis-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.sub-option').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('.lain-input').forEach(i => i.classList.remove('visible'));
+}
+
+function laporLagi() {
+  clearFormKejadian();
+  document.getElementById('success-screen').classList.remove('active');
+  document.getElementById('form-screen').classList.remove('hidden');
+}
+
+function selesai() {
+  clearFormKejadian();
+  ['nama','jabatan','departemen','atasan'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('success-screen').classList.remove('active');
+  document.getElementById('form-screen').classList.remove('hidden');
+}
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateDate();
+updateOnlineStatus();
+updatePendingBar();
+</script>
+</body>
+</html>
